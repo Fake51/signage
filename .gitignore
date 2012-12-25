@@ -1,4 +1,5 @@
 *.swp
 *.ttf
 *.otf
-backgrounds/*
+backgrounds/*.jpg
+backgrounds/*.png
