@@ -43,7 +43,7 @@
 <?php
 $fonts = '';
 foreach (scandir(__DIR__ . '/fonts') as $file) {
-    if (!is_dir($file)) {
+    if (!is_dir($file) && strtolower(substr($file, -4)) == '.ttf') {
         $fonts .= "'" . htmlspecialchars(basename($file, '.ttf'), ENT_QUOTES, 'UTF-8') . "',";
     }
 }
