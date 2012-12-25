@@ -2,10 +2,13 @@ $(function() {
     var textarea        = $('#controller textarea'),
         doc_width       = document.width,
         doc_height      = Math.round(doc_width / 1.55),
-        max_text_width  = doc_width * 3 / 4,
-        max_text_height = doc_height * 4 / 5,
+        max_text_width  = doc_width * 0.75,
+        max_text_height = doc_height * 0.75,
+        step            = 2, // stepsize in font points for auto-adjustment on writing
+        tolerance       = 5, // percentage of max limit that text area should be wihin
         canvas,
         canvas_text,
+        timeout,
         print_window;
 
     /**
@@ -114,16 +117,51 @@ $(function() {
      */
     function handleTextChange(e)
     {
-        var font_size = $('#font-size');
+        var self = $(this);
 
-        canvas_text.setText($(this).val());
-
-        while (canvas_text.getWidth() > max_text_width || canvas_text.getHeight() > max_text_height) {
-            font_size.val(parseInt(font_size.val(), 10) - 2);
-            handleFontSizeChange.call(font_size);
+        if (timeout) {
+            window.clearTimeout(timeout);
         }
 
-        canvas.renderAll();
+        function doTextChange()
+        {
+            var font_size = $('#font-size'),
+                modifier,
+                limit = 50;
+
+            timeout = null;
+
+            canvas_text.setText(self.val());
+
+            if (!isTextWithinTolerance()) {
+                modifier = step * (canvas_text.getWidth() > max_text_width || canvas_text.getHeight() > max_text_height ? -1 : 1);
+
+                while (!isTextWithinTolerance() && limit) {
+                    font_size.val(parseInt(font_size.val(), 10) + modifier);
+                    handleFontSizeChange.call(font_size);
+                    limit--;
+                }
+            }
+
+            canvas.renderAll();
+        }
+
+        timeout = window.setTimeout(doTextChange, 300);
+    }
+
+    /**
+     * checks if the text painted is currently within the tolerance zone
+     *
+     * @return bool
+     */
+    function isTextWithinTolerance()
+    {
+        var text_width  = canvas_text.getWidth(),
+            text_height = canvas_text.getHeight();
+
+        return (text_width < max_text_width && text_height < max_text_height)
+            && (Math.abs(text_width - max_text_width) < max_text_width * tolerance / 100
+                || Math.abs(text_height - max_text_height) < max_text_height * tolerance / 100);
     }
 
     /**
@@ -223,10 +261,38 @@ $(function() {
         }
     }
 
+    /**
+     * triggers when a user changes the color of the
+     * text via the input field and not the color picker
+     *
+     * @param Event e Change event triggered
+     *
+     * @return void
+     */
+    function handleManualTextColorChange(e)
+    {
+        $.farbtastic('#text-color-picker').setColor($(this).val());
+        handleTextColorChange($(this).val());
+    }
+
+    /**
+     * triggers when a user changes the color of the
+     * background via the input field and not the color picker
+     *
+     * @param Event e Change event triggered
+     *
+     * @return void
+     */
+    function handleManualBackgroundColorChange()
+    {
+        handleBackgroundColorChange($(this).val());
+    }
+
     // setup color pickers
     $('#background-color-picker').farbtastic(handleBackgroundColorChange);
     $('#text-color-picker').farbtastic(handleTextColorChange);
 
+    // setup event listeners
     $('#controller').on('click', handleControllerClick)
         .on('click', 'input.alignment', handleAlignmentClick)
         .on('keyup', 'textarea', handleTextChange);
@@ -236,6 +302,9 @@ $(function() {
     $('#controller button.opener').click(toggleAdvancedSettings);
 
     $('#print').click(handlePrint);
+
+    $('#text-color').change(handleManualTextColorChange);
+    $('#background-color').change(handleManualBackgroundColorChange);
 
     setupCanvas();
     setupFontSelector();
