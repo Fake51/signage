@@ -127,7 +127,7 @@ $(function() {
         {
             var font_size = $('#font-size'),
                 modifier,
-                limit = 50;
+                limit = 10;
 
             timeout = null;
 
@@ -140,6 +140,12 @@ $(function() {
                     font_size.val(parseInt(font_size.val(), 10) + modifier);
                     handleFontSizeChange.call(font_size);
                     limit--;
+                }
+
+                if (!limit) {
+                    window.setTimeout(function() {
+                        doTextChange();
+                    }, 0);
                 }
             }
 
