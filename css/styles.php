@@ -34,7 +34,6 @@ function browserify($css)
     <?= browserify('border-top-right-radius: 10px;');?>
 }
 
-#background-color-picker,
 #text-color-picker {
     position: fixed;
     bottom: 0;
@@ -69,10 +68,10 @@ label.block {
 }
 
 textarea {
-    width: 98%;
+    width: 85%;
 }
 
-#advanced {
+div.textbox-settings {
     display: none;
 }
 
@@ -82,6 +81,15 @@ button.opener {
 
 .clear {
     clear: both;
+}
+
+button.add-textbox,
+button.remove-textbox {
+    float:right;
+}
+
+input.text-color {
+    background-color: #000;
 }
 
 <?php foreach (scandir(__DIR__ . '/../fonts') as $file) : ?>

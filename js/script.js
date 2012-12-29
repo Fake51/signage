@@ -6,10 +6,270 @@ $(function() {
         max_text_height = doc_height * 0.75,
         step            = 2, // stepsize in font points for auto-adjustment on writing
         tolerance       = 5, // percentage of max limit that text area should be wihin
+        textboxes       = [],
+        font_startsize  = 100,
+        old_color,
         canvas,
-        canvas_text,
         timeout,
+        color_timeout,
+        current_textbox,
         print_window;
+
+    /**
+     * class used for text boxes
+     * drawn on the canvas
+     *
+     * @param Canvas canvas Canvs instance from the fabric.js library
+     *
+     * @return object
+     */
+    function CanvasTextbox(canvas, container)
+    {
+        var canvas_text;
+
+        if (!(this instanceof CanvasTextbox)) {
+            return new CanvasTextbox(canvas, container);
+        }
+
+        /**
+         * returns the container the textbox is
+         * tied to
+         *
+         * @return object
+         */
+        this.getContainer = function()
+        {
+            return container;
+        }
+
+        /**
+         * returns the canvas text element of the instance
+         *
+         * @return fabric.Text
+         */
+        this.getCanvasText = function()
+        {
+            return canvas_text;
+        }
+
+        this.index                  = textboxes.length + 1;
+        this.fontsize               = font_startsize;
+        this.font_input             = container.find('input.font-size');
+        container[0].canvas_textbox = this;
+
+        canvas_text = new fabric.Text(container.find('textarea').val(), {
+            fontSize: font_startsize,
+            textAlign: 'center',
+        });
+
+        if (fonts && fonts[0]) {
+            canvas_text.fontFamily = fonts[0];
+        }
+
+        textboxes.push(this);
+
+        for (var i = 0, length = textboxes.length; i < length; ++i) {
+            textboxes[i].resetBoundingBox();
+        }
+
+        canvas.add(canvas_text);
+        window.setTimeout(function() {
+            canvas.renderAll()
+        }, 1000);
+    }
+
+    /**
+     * sets/resets the bounding box for the
+     * textbox, possibly repositioning it
+     *
+     * @return this
+     */
+    CanvasTextbox.prototype.resetBoundingBox = function()
+    {
+        var box_count = textboxes.length;
+
+        this.max_height = max_text_height / box_count;
+        this.max_width  = max_text_width;
+
+        this.upper_limit = (doc_height - max_text_height) / 2 + (this.max_height * (this.index - 1));
+        this.lower_limit = this.upper_limit + this.max_height;
+        this.left_limit  = (doc_width - max_text_width) / 2;
+        this.right_limit = this.left_limit + this.max_width;
+
+        this.getCanvasText().set({top: this.upper_limit + this.max_height / 2, left: this.left_limit + this.max_width / 2});
+
+        this.resizeText();
+
+        return this;
+    }
+
+    /**
+     * removes the textbox
+     *
+     * @return void
+     */
+    CanvasTextbox.prototype.remove = function ()
+    {
+        textboxes.splice(this.index - 1, 1);
+
+        this.getCanvasText().remove();
+
+        for (var i = 0, length = textboxes.length; i < length; i++) {
+            textboxes[i].index = i + 1;
+            textboxes[i].resetBoundingBox();
+        }
+
+        canvas.renderAll();
+    }
+
+    /**
+     * Changes the color of the text
+     *
+     * @param string color New color for the text
+     *
+     * @return this
+     */
+    CanvasTextbox.prototype.setColor = function (color)
+    {
+        this.getCanvasText().setColor(color);
+        canvas.renderAll();
+
+        return this;
+    }
+
+    /**
+     * resizes the text of the textbox
+     * to fit inside the box's area
+     *
+     * @return this
+     */
+    CanvasTextbox.prototype.resizeText = function()
+    {
+        var modifier,
+            limit = 20,
+            self  = this;
+
+        if (!this.isTextWithinTolerance()) {
+
+            modifier = step * (this.getCanvasText().getWidth() > this.max_width || this.getCanvasText().getHeight() > this.max_height ? -1 : 1);
+
+            while (!this.isTextWithinTolerance() && limit) {
+                this.fontsize += modifier;
+                this.getCanvasText().setFontsize(this.fontsize);
+                limit--;
+            }
+
+            this.font_input.val(this.fontsize);
+
+            if (!limit) {
+                window.setTimeout(function() {
+                    self.resizeText();
+                    canvas.renderAll();
+                }, 0);
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * updates the text of a textbox
+     *
+     * @param string text New text to set for textbox
+     *
+     * @return this
+     */
+    CanvasTextbox.prototype.changeText = function (text)
+    {
+        this.getCanvasText().setText(text);
+        this.resizeText();
+
+        canvas.renderAll();
+
+        return this;
+    }
+
+    /**
+     * checks if the text painted is currently within the tolerance zone
+     *
+     * @return bool
+     */
+    CanvasTextbox.prototype.isTextWithinTolerance = function()
+    {
+        var text_width  = this.getCanvasText().getWidth(),
+            text_height = this.getCanvasText().getHeight(),
+            returnval;
+
+        return this.isTextInsideMax()
+            && (Math.abs(text_width - this.max_width) < this.max_width * tolerance / 100
+                || Math.abs(text_height - this.max_height) < this.max_height * tolerance / 100);
+    }
+
+    /**
+     * checks if the text painted is outside its bounding box
+     *
+     * @return bool
+     */
+    CanvasTextbox.prototype.isTextInsideMax = function()
+    {
+        return this.getCanvasText().getWidth() < this.max_width && this.getCanvasText().getHeight() < this.max_height;
+    }
+
+    /**
+     * override the automatically found font size
+     *
+     * @param string fontsize Fontsize to use
+     *
+     * @return this
+     */
+    CanvasTextbox.prototype.setFontSize = function(fontsize)
+    {
+        var size     = parseInt(fontsize, 10),
+            old_size = this.fontsize;
+
+        this.fontsize = size;
+        this.getCanvasText().setFontsize(this.fontsize);
+
+        if (!this.isTextInsideMax()) {
+            this.fontsize = old_size;
+            this.getCanvasText().setFontsize(old_size);
+            this.font_input.val(this.fontsize);
+        }
+
+        canvas.renderAll();
+
+        return this;
+    }
+
+    /**
+     * changes the textbox to another font
+     *
+     * @param string font_family Name of font to switch to
+     *
+     * @return this
+     */
+    CanvasTextbox.prototype.changeFont = function(font_family)
+    {
+        this.getCanvasText().fontFamily = font_family;
+        canvas.renderAll();
+
+        return this;
+    }
+
+    /**
+     * changes the alignment of the text box
+     *
+     * @param string alignment New text alignment, one of left, center or right
+     *
+     * @return this
+     */
+    CanvasTextbox.prototype.changeAlignment = function(alignment)
+    {
+        this.getCanvasText().textAlign = alignment;
+        canvas.renderAll();
+
+        return this;
+    }
 
     /**
      * sets up the canvas object
@@ -23,21 +283,7 @@ $(function() {
             .setWidth(doc_width)
             .setBackgroundImage('/backgrounds/' + backgrounds[0]);
 
-        canvas_text = new fabric.Text(textarea.val(), {
-            fontSize: 100,
-            textAlign: 'center',
-            left: doc_width / 2,
-            top: doc_height / 2
-        });
-
-        if (fonts && fonts[0]) {
-            canvas_text.fontFamily = fonts[0];
-        }
-
-        canvas.add(canvas_text);
-        window.setTimeout(function() {
-            canvas.renderAll()
-        }, 1000);
+        new CanvasTextbox(canvas, $('div.textbox'));
     }
 
     /**
@@ -53,7 +299,7 @@ $(function() {
             select.append('<option value="/backgrounds/' + backgrounds[i] + '">' + backgrounds[i] + '</option>');
         }
 
-        $('#advanced p.background').append(select);
+        $('p.background').append(select);
 
         select.on('change', function() {
             canvas.setBackgroundImage(select.val());
@@ -77,15 +323,7 @@ $(function() {
             select.append('<option value="' + fonts[i] + '">' + fonts[i] + '</option>');
         }
 
-        $('#advanced p.font').append(select);
-
-        select.on('change', function() {
-            canvas_text.fontFamily = select.val();
-            canvas.renderAll();
-            window.setTimeout(function() {
-                canvas.renderAll();
-            }, 1000);
-        });
+        $('p.font').append(select);
     }
 
     /**
@@ -100,10 +338,17 @@ $(function() {
         var self      = $(e.target),
             classname;
 
-        $('#background-color-picker, #text-color-picker').hide();
+        e.preventDefault();
+        e.stopPropagation();
+
+        $('#text-color-picker').hide();
+        current_textbox = null;
 
         if (e.target.nodeName == 'INPUT') {
-            classname = self.attr('id') + '-picker';
+            old_color       = self.val();
+            current_textbox = getConnectedTextbox(self);
+            classname       = self.attr('class') + '-picker';
+
             $('#' + classname).show();
         }
     }
@@ -117,57 +362,36 @@ $(function() {
      */
     function handleTextChange(e)
     {
-        var self = $(this);
+        var self    = $(this),
+            textbox = getConnectedTextbox(self);
 
         if (timeout) {
             window.clearTimeout(timeout);
         }
 
-        function doTextChange()
-        {
-            var font_size = $('#font-size'),
-                modifier,
-                limit = 10;
 
+        timeout = window.setTimeout(function() {
             timeout = null;
-
-            canvas_text.setText(self.val());
-
-            if (!isTextWithinTolerance()) {
-                modifier = step * (canvas_text.getWidth() > max_text_width || canvas_text.getHeight() > max_text_height ? -1 : 1);
-
-                while (!isTextWithinTolerance() && limit) {
-                    font_size.val(parseInt(font_size.val(), 10) + modifier);
-                    handleFontSizeChange.call(font_size);
-                    limit--;
-                }
-
-                if (!limit) {
-                    window.setTimeout(function() {
-                        doTextChange();
-                    }, 0);
-                }
-            }
-
-            canvas.renderAll();
-        }
-
-        timeout = window.setTimeout(doTextChange, 300);
+            textbox.changeText(self.val());
+        }, 300);
     }
 
     /**
-     * checks if the text painted is currently within the tolerance zone
+     * returns the canvas textbox related to a given container
      *
-     * @return bool
+     * @param Object element jQuery set containing a descendant of a textbox container
+     *
+     * @return CanvasTextbox
      */
-    function isTextWithinTolerance()
+    function getConnectedTextbox(element)
     {
-        var text_width  = canvas_text.getWidth(),
-            text_height = canvas_text.getHeight();
+        var container = element.closest('div.textbox');
 
-        return (text_width < max_text_width && text_height < max_text_height)
-            && (Math.abs(text_width - max_text_width) < max_text_width * tolerance / 100
-                || Math.abs(text_height - max_text_height) < max_text_height * tolerance / 100);
+        if (!container[0].canvas_textbox) {
+            throw new Error('Textbox not found');
+        }
+
+        return container[0].canvas_textbox;
     }
 
     /**
@@ -179,22 +403,10 @@ $(function() {
      */
     function handleTextColorChange(color)
     {
-        $('#text-color').css('background-color', color).val(color);
-        canvas_text.setColor(color);
-        canvas.renderAll();
-    }
-
-    /**
-     * runs after user has chosen new color for the background
-     *
-     * @param string color New color chosen
-     *
-     * @return void
-     */
-    function handleBackgroundColorChange(color)
-    {
-        $('#background-color').css('background-color', color).val(color);
-        container.css('background-color', color);
+        if (current_textbox) {
+            current_textbox.getContainer().find('input.text-color').css('background-color', color).val(color);
+            current_textbox.setColor(color);
+        }
     }
 
     /**
@@ -207,8 +419,10 @@ $(function() {
      */
     function handleAlignmentClick(e)
     {
-        canvas_text.textAlign = $(this).val();
-        canvas.renderAll();
+        var self    = $(this),
+            textbox = getConnectedTextbox(self);
+
+        textbox.changeAlignment(self.val());
     }
 
     /**
@@ -220,8 +434,10 @@ $(function() {
      */
     function handleFontSizeChange(e)
     {
-        canvas_text.setFontsize(parseInt($(this).val(), 10));
-        canvas.renderAll();
+        var self    = $(this),
+            textbox = getConnectedTextbox(self);
+
+        textbox.setFontSize(self.val());
     }
 
     /**
@@ -233,7 +449,9 @@ $(function() {
      */
     function toggleAdvancedSettings(e)
     {
-        $('#advanced').animate({height: 'toggle'});
+        var self = $(this);
+
+        self.parent().find('div.textbox-settings').animate({height: 'toggle'});
     }
 
     /**
@@ -268,6 +486,45 @@ $(function() {
     }
 
     /**
+     * adds a textbox clone after button trigger
+     *
+     * @param Event e Click event triggered
+     *
+     * @return void
+     */
+    function addTextBox()
+    {
+        var original   = $('div.textbox').first(),
+            last       = $('div.textbox').last(),
+            text_color,
+            clone;
+
+        clone = $('<div class="textbox">' + original.html() + '</div>').insertAfter(last);
+        clone.find('button.add-textbox').removeClass('add-textbox').addClass('remove-textbox').text('-');
+        clone.find('div.textbox-settings').hide();
+        text_color = clone.find('input.text-color');
+        text_color.css('background-color', text_color.val());
+        new CanvasTextbox(canvas, clone);
+    }
+
+    /**
+     * function docblock
+     *
+     * @param
+     *
+     * @return void
+     */
+    function removeTextBox()
+    {
+        var container = $(this).closest('div.textbox'),
+            textbox   = getConnectedTextbox($(this));
+
+        textbox.remove();
+
+        container.remove();
+    }
+
+    /**
      * triggers when a user changes the color of the
      * text via the input field and not the color picker
      *
@@ -277,42 +534,72 @@ $(function() {
      */
     function handleManualTextColorChange(e)
     {
-        $.farbtastic('#text-color-picker').setColor($(this).val());
-        handleTextColorChange($(this).val());
+        var new_color = $(this).val();
+
+        if (color_timeout) {
+            window.clearTimeout(color_timeout);
+        }
+
+        if (new_color.length == 7 && new_color != old_color) {
+            window.setTimeout(function() {
+                old_color = new_color;
+                $.farbtastic('#text-color-picker').setColor(new_color);
+                handleTextColorChange(new_color);
+            }, 300);
+        }
     }
 
     /**
-     * triggers when a user changes the color of the
-     * background via the input field and not the color picker
+     * triggered on font changes for textbox
      *
      * @param Event e Change event triggered
      *
      * @return void
      */
-    function handleManualBackgroundColorChange()
+    function handleFontChange(e)
     {
-        handleBackgroundColorChange($(this).val());
+        var self      = $(this),
+            textbox   = getConnectedTextbox(self);
+
+        textbox.changeFont(self.val());
+    }
+
+    /**
+     * closes open settings, hides color pickers
+     *
+     * @return void
+     */
+    function minimize()
+    {
+        $('div.textbox-settings:visible').animate({height: 'toggle'});
+        $('#text-color-picker').hide();
+
+        current_textbox = null;
+        old_color       = null;
+
     }
 
     // setup color pickers
-    $('#background-color-picker').farbtastic(handleBackgroundColorChange);
     $('#text-color-picker').farbtastic(handleTextColorChange);
 
     // setup event listeners
-    $('#controller').on('click', handleControllerClick)
+    $('#controller')
+        .on('click', 'button.opener', toggleAdvancedSettings)
+        .on('click', 'button.add-textbox', addTextBox)
+        .on('click', 'button.remove-textbox', removeTextBox)
         .on('click', 'input.alignment', handleAlignmentClick)
-        .on('keyup', 'textarea', handleTextChange);
-
-    $('#font-size').on('change', handleFontSizeChange);
-
-    $('#controller button.opener').click(toggleAdvancedSettings);
+        .on('change', 'input.font-size', handleFontSizeChange)
+        .on('change', 'p.font select', handleFontChange)
+        .on('click', handleControllerClick)
+        .on('keyup', 'textarea', handleTextChange)
+        .on('keyup', 'input.text-color', handleManualTextColorChange);
 
     $('#print').click(handlePrint);
+    $('body').click(minimize);
 
-    $('#text-color').change(handleManualTextColorChange);
-    $('#background-color').change(handleManualBackgroundColorChange);
-
-    setupCanvas();
-    setupFontSelector();
-    setupBackgroundSelector();
+    window.setTimeout(function() {
+        setupCanvas();
+        setupFontSelector();
+        setupBackgroundSelector();
+    }, 3000);
 });

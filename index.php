@@ -12,32 +12,42 @@
     <canvas id="container">
     </canvas>
     <div id="controller">
-        <textarea id='text'>Text goes here</textarea>
-        <button id="print">Print</button>
-        <button class="opener">Settings</button>
-        <div id="advanced">
-            <div class="box">
-                <label for="background-color">Background</label> <input id="background-color" type="text" value="#ffffff"/>
-                <label for="text-color">Text</label> <input id="text-color" type="text" value="#000000"/>
-                <label for="font-size">Font size</label> <input id="font-size" type="number" value="100"/>
+        <div class="textbox">
+            <textarea>Text goes here</textarea><button class="add-textbox">+</button>
+            <button class="opener">Settings</button>
+            <div class="clear"></div>
+            <div class="textbox-settings">
+                <div class="box">
+                    <label>Text color</label> <input class="text-color" type="text" value="#000000"/>
+                    <label>Font size</label> <input class="font-size" type="number" value="100"/>
+                </div>
+                <p class="alignment">
+                    <label class="block">Alignment</label>
+                    <input type="radio" name="alignment" class="left alignment" value="left"/> <label for="left">Left</label>
+                    <input type="radio" name="alignment" class="center alignment" checked="checked" value="center"/> <label for="left">Center</label>
+                    <input type="radio" name="alignment" class="right alignment" value="right"/> <label for="left">Right</label>
+                </p>
+                <p class="font">
+                    <label class="block">Font</label>
+                </p>
             </div>
-            <p class="alignment">
-                <label class="block">Alignment</label>
-                <input type="radio" name="alignment" id="left" class="alignment" value="left"/> <label for="left">Left</label>
-                <input type="radio" name="alignment" id="center" checked="checked" class="alignment" value="center"/> <label for="left">Center</label>
-                <input type="radio" name="alignment" id="right" class="alignment" value="right"/> <label for="left">Right</label>
-            </p>
-            <p class="font">
-                <label class="block">Font</label>
-            </p>
-            <p class="background">
-                <label class="block">Background</label>
-            </p>
         </div>
-    </div>
-    <div id="background-color-picker">
+        <p class="background">
+            <label class="block">Background</label>
+        </p>
+        <button id="print">Print</button>
     </div>
     <div id="text-color-picker">
+    </div>
+    <div class="hidden">
+<?php
+$fonts = '';
+foreach (scandir(__DIR__ . '/fonts') as $file) {
+    if (!is_dir($file) && strtolower(substr($file, -4)) == '.ttf') :?>
+        <span style="font-family: <?= htmlspecialchars(basename($file, '.ttf'), ENT_QUOTES, 'UTF-8');?>"> </span>
+    <?php endif;
+}
+?>
     </div>
     <script>
 <?php
