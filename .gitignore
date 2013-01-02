@@ -3,3 +3,7 @@
 *.otf
 backgrounds/*.jpg
 backgrounds/*.png
+icons/*.jpg
+icons/*.png
+icons/thumbnails/*.jpg
+icons/thumbnails/*.png
