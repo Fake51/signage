@@ -2,23 +2,7 @@
 header('HTTP/1.1 200 Done');
 header('Content-Type: text/css; charset=UTF-8');
 
-/**
- * returns css strings with browser specific prefixes
- * as well as the real css string
- *
- * @param string $css CSS bit to create browser specific bits for
- *
- * @return string
- */
-function browserify($css)
-{
-    $return = '';
-    foreach (array('-webkit', '-moz', '-ms', '-o') as $browser) {
-        $return .= $browser . $css . PHP_EOL;
-    }
-
-    return $return . $css . PHP_EOL;
-}
+require '../functions.php';
 
 ?>
 #controller {
@@ -71,7 +55,7 @@ textarea {
     width: 85%;
 }
 
-div.textbox-settings {
+div.settings {
     display: none;
 }
 
@@ -92,11 +76,19 @@ input.text-color {
     background-color: #000;
 }
 
-<?php foreach (scandir(__DIR__ . '/../fonts') as $file) : ?>
-    <?php if (!is_dir($file)) : ?>
+.hidden {
+    height: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+p.icons img {
+    cursor: pointer;
+}
+
+<?php foreach (getFonts() as $font => $file) : ?>
 @font-face {
-    font-family: <?= htmlspecialchars(basename($file, '.ttf'), ENT_QUOTES, 'UTF-8');?>;
+    font-family: <?= $font;?>;
     src: url('/fonts/<?= $file;?>');
 }
-    <?php endif;?>
 <?php endforeach;?>
