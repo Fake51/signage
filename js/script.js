@@ -1,6 +1,6 @@
 $(function() {
     var textarea        = $('#controller textarea'),
-        doc_width       = document.width,
+        doc_width       = window.screen.width > 1280 ? window.screen.width : 1280,
         doc_height      = Math.round(doc_width / 1.55),
         max_text_width  = doc_width * 0.75,
         max_text_height = doc_height * 0.75,
@@ -464,7 +464,7 @@ $(function() {
         var select = $('<select></select>');
 
         for (var i = 0, length = backgrounds.length; i < length; ++i) {
-            select.append('<option value="' + backgrounds[i] + '">' + backgrounds[i] + '</option>');
+            select.append('<option value="' + backgrounds[i] + '">' + backgrounds[i].replace(/\/backgrounds\//, '') + '</option>');
         }
 
         $('p.background').append(select);

@@ -47,7 +47,7 @@ label.block {
 }
 
 #controller div.box input {
-    float: right
+    float: right;
     display: block;
 }
 
