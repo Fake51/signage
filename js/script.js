@@ -1,12 +1,12 @@
 $(function() {
     var textarea        = $('#controller textarea'),
-        doc_width       = window.screen.width > 1280 ? window.screen.width : 1280,
+        doc_width       = window.screen.width >= 1280 ? window.screen.width - 30 : 1250,
         doc_height      = Math.round(doc_width / 1.55),
         max_text_width  = doc_width * 0.75,
-        max_text_height = doc_height * 0.75,
+        max_text_height = doc_height * 0.70,
         step            = 2, // stepsize in font points for auto-adjustment on writing
         tolerance       = 5, // percentage of max limit that text area should be wihin
-        boxes       = [],
+        boxes           = [],
         font_startsize  = 100,
         fonts           = [],
         old_color,
