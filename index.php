@@ -2,12 +2,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link href="/css/styles.php?v=20130103" rel="stylesheet"/>
+    <link href="/css/styles.php?v=20130104" rel="stylesheet"/>
     <link href="/js/farbtastic/farbtastic.css" rel="stylesheet"/>
     <script src="/js/jquery-1.8.3.min.js"></script>
     <script src="/js/farbtastic/farbtastic.js"></script>
     <script src="/js/fabric.min.js"></script>
-    <script src="/js/script.js?v=20130103"></script>
+    <script src="/js/signage.js?v=20130104"></script>
 </head>
 <body>
     <canvas id="container">
@@ -71,6 +71,8 @@ foreach (getBackgrounds() as $file) {
 ?>
 
     var backgrounds = [<?= trim($backgrounds, ',');?>];
+
+    var signage = new Signage();
     </script>
 </body>
 </html>

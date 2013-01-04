@@ -1,20 +1,48 @@
-$(function() {
-    var textarea        = $('#controller textarea'),
-        doc_width       = window.screen.width >= 1280 ? window.screen.width - 30 : 1250,
-        doc_height      = Math.round(doc_width / 1.55),
-        max_text_width  = doc_width * 0.75,
-        max_text_height = doc_height * 0.70,
-        step            = 2, // stepsize in font points for auto-adjustment on writing
-        tolerance       = 5, // percentage of max limit that text area should be wihin
-        boxes           = [],
-        font_startsize  = 100,
-        fonts           = [],
+function Signage(options)
+{
+    var options                   = options || {},
+        step                      = options.step || 2, // stepsize in font points for auto-adjustment on writing
+        tolerance                 = options.tolerance || 5, // percentage of max limit that text area should be wihin
+        boxes                     = [],
+        font_startsize            = options.font_startsize || 100,
+        fonts                     = [],
+        doc_width                 = options.doc_width || null,
+        doc_height                = options.doc_height || null,
+        max_width_percentage      = options.max_width_percentage || 85,
+        max_height_percentage     = options.max_height_percentage || 70,
+        min_width_workarea        = options.min_width_workarea || 1250,
+        width_height_relationship = options.width_height_relationship || 1.55,
+        max_text_width,
+        max_text_height,
         old_color,
         canvas,
         timeout,
         color_timeout,
         current_textbox,
         print_window;
+
+    /**
+     * initializes the width and height parameters
+     *
+     * @return void
+     */
+    function determineWorkArea()
+    {
+        if (!doc_width) {
+            doc_width  = window.innerWidth >= min_width_workarea ? window.innerWidth - 30 : min_width_workarea;
+            doc_height = Math.round(doc_width / width_height_relationship);
+        }
+
+        max_text_width  = doc_width * max_width_percentage / 100;
+        max_text_height = doc_height * max_height_percentage / 100;
+
+        if (doc_height > window.innerHeight && options.fit_screen) {
+            doc_width       = Math.round(doc_width * (window.innerHeight / doc_height));
+            doc_height      = window.innerHeight;
+            max_text_width  = doc_width * max_width_percentage / 100;
+            max_text_height = doc_height * max_height_percentage / 100;
+        }
+    }
 
     /**
      * base object for canvas interaction
@@ -809,8 +837,9 @@ $(function() {
     $('body').click(minimize);
 
     window.setTimeout(function() {
+        determineWorkArea();
         setupFontSelector();
         setupBackgroundSelector();
         setupCanvas();
     }, 3000);
-});
+}
